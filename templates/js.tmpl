@@ -64,8 +64,29 @@ template :defs
     M.t%{ Id } = %{ . :def };
     %{ . :selectors }
 
+jpath :list
+
+    , yr.nodeset2data(%{ . })
+
 template :def
-    function t%{ Id }(m, c%{ Cid }, i%{ Cid }, l%{ Cid }, a%{ Rid }%{ Args }) {
+    function t%{ Id }(uuid, m, c%{ Cid }, i%{ Cid }, l%{ Cid }, a%{ Rid }%{ Args }) {
+        var traversal = IncrementalDOM.traversal;
+        var track = window.tracking[uuid] || {};
+        var prev_state = track[i%{ Cid }];
+        var skip = false;
+        var current_state = Immutable.fromJS([null%{ UpdateKeys :list }]);
+        if (current_state.size > 1) {
+            if (prev_state && Immutable.is(prev_state, current_state)) {
+                skip = true;
+            }
+            track[i%{ Cid }] = current_state;
+            window.tracking[uuid] = track;
+        }
+        if (skip) {
+            closeAttrs(a%{ Rid });
+            IncrementalDOM.elementSkip();
+            return '';
+        }
         %{ Args :defaults }
         %{ . :template_prologue }
         var current = [ c%{ Cid } ];
@@ -483,7 +504,7 @@ apply :output-prologue [ p.Expr.id === 'object' ]
     %{ Expr :output }
 
 apply :output-value [ p.Expr.id === 'object' ]
-    m.a(m, %{ Start }, yr.object2nodeset(r%{ Expr.Rid }), %{ Mode :string }, a%{ Rid }%{ Args :comma })
+    m.a('%{ UUID }', m, %{ Start }, yr.object2nodeset(r%{ Expr.Rid }), %{ Mode :string }, a%{ Rid }%{ Args :comma })
 
 apply :output-prologue [ p.Expr.id === 'array' ]
 
@@ -491,19 +512,19 @@ apply :output-prologue [ p.Expr.id === 'array' ]
     %{ Expr :output }
 
 apply :output-value [ p.Expr.id === 'array' ]
-    m.a(m, %{ Start }, yr.array2nodeset(r%{ Expr.Rid }), %{ Mode :string }, a%{ Rid }%{ Args :comma })
+    m.a('%{ UUID }', m, %{ Start }, yr.array2nodeset(r%{ Expr.Rid }), %{ Mode :string }, a%{ Rid }%{ Args :comma })
 
 apply :output-value [ p.Expr.getType() === 'object' ]
 
-    m.a(m, %{ Start }, yr.object2nodeset(%{ Expr }), %{ Mode :string }, a%{ Rid }%{ Args :comma })
+    m.a('%{ UUID }', m, %{ Start }, yr.object2nodeset(%{ Expr }), %{ Mode :string }, a%{ Rid }%{ Args :comma })
 
 apply :output-value [ p.Expr.getType() === 'array' ]
 
-    m.a(m, %{ Start }, yr.array2nodeset(%{ Expr }), %{ Mode :string }, a%{ Rid }%{ Args :comma })
+    m.a('%{ UUID }'m, %{ Start }, yr.array2nodeset(%{ Expr }), %{ Mode :string }, a%{ Rid }%{ Args :comma })
 
 apply :output-value
 
-    m.a(m, %{ Start }, %{ Expr }, %{ Mode :string }, a%{ Rid }%{ Args :comma })
+    m.a('%{ UUID }', m, %{ Start }, %{ Expr }, %{ Mode :string }, a%{ Rid }%{ Args :comma })
 
 template_mode :string
 
